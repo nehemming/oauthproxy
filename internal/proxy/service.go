@@ -5,6 +5,7 @@ package proxy
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context/ctxhttp"
+	"golang.org/x/oauth2"
 )
 
 type (
@@ -83,7 +85,7 @@ func Run(ctx context.Context, settings Settings) error {
 		}
 	}()
 
-	//	Wait for exit signal
+	// Wait for exit signal
 	<-rt.done()
 
 	// Mark that we are stopping
@@ -105,9 +107,6 @@ func Run(ctx context.Context, settings Settings) error {
 // newRuntime creates the internal runtime object used to handle the service
 func newRuntime(ctx context.Context, settings Settings) *runtime {
 	runningCtx, cancel := context.WithCancel(ctx)
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 
 	rt := &runtime{
 		cancel:            cancel,
@@ -380,7 +379,8 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 	w.Write(body)
 
 	// If reply was a 500+ error don't cache the result
-	if resp.StatusCode < 500 {
+	if resp.StatusCode < http.StatusInternalServerError &&
+		resp.StatusCode != http.StatusTooManyRequests {
 		rt.update(tr, header, body, resp.StatusCode)
 	}
 }
@@ -388,12 +388,12 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 // reply to a upstream request with an existing entry
 func (rt *runtime) reply(w http.ResponseWriter, entry entry) {
 
-	//	Send the reply back, set standard headers
+	// Send the reply back, set standard headers
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 
-	//	Set headers from downstream
+	// Set headers from downstream
 	for key := range entry.header {
 		w.Header().Set(key, entry.header.Get(key))
 	}
@@ -416,9 +416,24 @@ func (rt *runtime) update(tr tokenRequest, header http.Header, body []byte, stat
 
 	rt.logInfo("update cache for %s with status %d", tr.path, statusCode)
 
+	now := time.Now().UTC()
+	expiry := now.Add(rt.ttl)
+
+	if statusCode == http.StatusOK {
+		// request succeeded, try and get expiry time from the request
+		authToken := oauth2.Token{}
+
+		// If the expiry in the token is shorter than our ttl reduce the time
+		if err := json.Unmarshal(body, &authToken); err == nil {
+			if authToken.Expiry.After(now) && authToken.Expiry.Before(expiry) {
+				expiry = authToken.Expiry
+			}
+		}
+	}
+
 	e := entry{
 		statusCode: statusCode,
-		expiry:     time.Now().UTC().Add(rt.ttl),
+		expiry:     expiry,
 		header:     header,
 		token:      body,
 	}

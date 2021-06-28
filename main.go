@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -31,7 +30,6 @@ func main() {
 	// Main service entrypoint
 	appName := strings.ToLower(filepath.Base(os.Args[0]))
 
-	fmt.Println(appName)
 	var exitCode = cmd.Run(ctx, appName)
 
 	// Exit with the returned exit code
