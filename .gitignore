@@ -1,0 +1,7 @@
+oauthproxy
+.oauthproxy
+*.exe
+*.out
+/vendor/
+.secrets
+.__debug_bin
