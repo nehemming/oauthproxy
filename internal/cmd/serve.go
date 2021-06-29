@@ -1,6 +1,7 @@
 /*
 Copyright © 2018-2021 Neil Hemming
 */
+
 package cmd
 
 import (
@@ -14,17 +15,17 @@ import (
 )
 
 const (
-	FlagEndpoint = "downstream"
-	FlagPort     = "port"
-	FlagSilent   = "silent"
+	flagEndpoint = "downstream"
+	flagPort     = "port"
+	flagSilent   = "silent"
 
-	CfgEndpoint = "serve.downstream"
-	CfgPort     = "serve.port"
-	CfgCacheTtl = "serve.cacheTTL"
-	CfgTimeout  = "serve.timeout"
-	CfgShutdown = "serve.shutdown"
-	CfgSilent   = "serve.silent"
-	CfgPoolSize = "serve.poolSize"
+	cfgEndpoint = "serve.downstream"
+	cfgPort     = "serve.port"
+	cfgCacheTTL = "serve.cacheTTL"
+	cfgTimeout  = "serve.timeout"
+	cfgShutdown = "serve.shutdown"
+	cfgSilent   = "serve.silent"
+	cfgPoolSize = "serve.poolSize"
 )
 
 func (cli *cli) runServerCmd(cmd *cobra.Command, args []string) error {
@@ -45,38 +46,38 @@ func (cli *cli) runServerCmd(cmd *cobra.Command, args []string) error {
 func (cli *cli) bindServeFlagsAndConfig(cmd *cobra.Command) {
 	pf := cmd.PersistentFlags()
 
-	pf.String(FlagEndpoint, "", "downstream url")
-	viper.BindPFlag(CfgEndpoint, pf.Lookup(FlagEndpoint))
+	pf.String(flagEndpoint, "", "downstream url")
+	viper.BindPFlag(cfgEndpoint, pf.Lookup(flagEndpoint))
 
-	pf.Uint(FlagPort, 8090, "port proxy listening on")
-	viper.BindPFlag(CfgPort, pf.Lookup(FlagPort))
-	viper.SetDefault(CfgPort, 8090)
+	pf.Uint(flagPort, 8090, "port proxy listening on")
+	viper.BindPFlag(cfgPort, pf.Lookup(flagPort))
+	viper.SetDefault(cfgPort, 8090)
 
-	viper.SetDefault(CfgCacheTtl, 15)
-	viper.SetDefault(CfgShutdown, 10)
-	viper.SetDefault(CfgTimeout, 30)
-	viper.SetDefault(CfgPoolSize, 2)
+	viper.SetDefault(cfgCacheTTL, 15)
+	viper.SetDefault(cfgShutdown, 10)
+	viper.SetDefault(cfgTimeout, 30)
+	viper.SetDefault(cfgPoolSize, 2)
 
-	pf.Bool(FlagSilent, false, "silence all output logging")
-	viper.BindPFlag(CfgSilent, pf.Lookup(FlagSilent))
-	viper.SetDefault(CfgSilent, false)
+	pf.Bool(flagSilent, false, "silence all output logging")
+	viper.BindPFlag(cfgSilent, pf.Lookup(flagSilent))
+	viper.SetDefault(cfgSilent, false)
 }
 
 // configureSettings configures the applications settings
 func configureSettings(settings proxy.Settings) (proxy.Settings, error) {
 
 	//	Add in the settings
-	endpoint := viper.GetString(CfgEndpoint)
-	port := viper.GetUint(CfgPort)
+	endpoint := viper.GetString(cfgEndpoint)
+	port := viper.GetUint(cfgPort)
 
-	settings.CacheTTL = time.Duration(viper.GetUint(CfgCacheTtl) * uint(time.Minute))
-	settings.ShutdownGracePeriod = time.Duration(viper.GetUint(CfgShutdown) * uint(time.Second))
-	settings.RequestTimeout = time.Duration(viper.GetUint(CfgTimeout) * uint(time.Second))
-	settings.PoolSize = viper.GetInt(CfgPoolSize)
+	settings.CacheTTL = time.Duration(viper.GetUint(cfgCacheTTL) * uint(time.Minute))
+	settings.ShutdownGracePeriod = time.Duration(viper.GetUint(cfgShutdown) * uint(time.Second))
+	settings.RequestTimeout = time.Duration(viper.GetUint(cfgTimeout) * uint(time.Second))
+	settings.PoolSize = viper.GetInt(cfgPoolSize)
 
 	var logger proxy.LoggerFunc
 
-	if !viper.GetBool(CfgSilent) {
+	if !viper.GetBool(cfgSilent) {
 		logger = func(isError bool, format string, args ...interface{}) {
 			if isError {
 				log.Errorln(fmt.Sprintf(format, args...))
@@ -89,5 +90,5 @@ func configureSettings(settings proxy.Settings) (proxy.Settings, error) {
 	return settings.
 		WithEndpoint(endpoint).
 		WithLogger(logger).
-		WithHttpPort(port), nil
+		WithHTTPPort(port), nil
 }

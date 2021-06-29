@@ -1,6 +1,8 @@
 /*
 Copyright © 2018-2021 Neil Hemming
 */
+
+//Package cmd provides the command line interface to oauthproxy
 package cmd
 
 import (
@@ -15,11 +17,14 @@ import (
 )
 
 const (
+	// ExitCodeSuccess indicates a successful exit
 	ExitCodeSuccess = 0
-	ExitCodeError   = 1
+
+	// ExitCodeError indicates a non successful process exit
+	ExitCodeError = 1
 
 	envPrefix  = "OAP"
-	FlagConfig = "config"
+	flagConfig = "config"
 )
 
 type (
@@ -31,6 +36,8 @@ type (
 	}
 )
 
+// Run executes the command line interface to the app.  The passed ctx is used to cancel long running tasks.
+// appName is the name of the application and forms the suffix of the dot config file
 func Run(ctx context.Context, appName string) int {
 
 	cli := &cli{
@@ -63,7 +70,7 @@ func Run(ctx context.Context, appName string) int {
 		RunE:          cli.requestTokenCmd,
 	}
 
-	cli.rootCmd.PersistentFlags().StringVar(&cli.configFile, FlagConfig, "",
+	cli.rootCmd.PersistentFlags().StringVar(&cli.configFile, flagConfig, "",
 		fmt.Sprintf("specify a configuration file (default is ./%s)", cli.appName))
 
 	cli.rootCmd.AddCommand(serverCmd)

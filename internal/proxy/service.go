@@ -1,6 +1,8 @@
 /*
 Copyright © 2018-2021 Neil Hemming
 */
+
+//Package proxy contains the implementation of the oauthproxy service
 package proxy
 
 import (
@@ -72,13 +74,13 @@ func Run(ctx context.Context, settings Settings) error {
 
 	// Create the http server (possible add support for https here too)
 	srv := http.Server{
-		Addr:    settings.HttpListenAddr,
+		Addr:    settings.HTTPListenAddr,
 		Handler: http.HandlerFunc(rt.handleRequest),
 		//ErrorLog: &log.Logger{},
 	}
 
 	go func() {
-		rt.logInfo("http listening on %s for downstream %s", settings.HttpListenAddr, settings.Endpoint)
+		rt.logInfo("http listening on %s for downstream %s", settings.HTTPListenAddr, settings.Endpoint)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			rt.criticalError(err)
@@ -157,6 +159,7 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 
 	// Valiudate we are using password flow
 	if grantType := r.PostFormValue("grant_type"); grantType != "password" {
+		rt.logError("invlaid grant type: %s", grantType)
 		replyInvalid(w)
 		return tr, false
 	}
@@ -186,8 +189,13 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 	return tr, true
 }
 
-// close terminates the
+// close terminates the service. It can only be called once
+// use rt.cancel to initiate shutdown
 func (rt *runtime) close() {
+
+	// Cancel the context, will close house keeping
+	rt.cancel()
+	rt.isStopping = true
 
 	// Close the channel, will cause downstreamService to exit
 	close(rt.downstream)
@@ -229,8 +237,8 @@ func (rt *runtime) done() <-chan struct{} {
 func (rt *runtime) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Check the request isa a valid token request
-	tr, ok := rt.parseRequest(w, r)
-	if !ok {
+	tr, matched := rt.parseRequest(w, r)
+	if !matched {
 		// parse handles client responses
 		return
 	}
@@ -320,7 +328,7 @@ func (rt *runtime) requestFromDownstream(tr tokenRequest, w http.ResponseWriter)
 	rt.logInfo("passing on downstream request for %s", tr.path)
 
 	// Send the request to the downs stream queue
-	// As Http Handlers need to wait for competion before exiting, so
+	// As HTTP Handlers need to wait for competition before exiting, so
 	// we will wait on a don channel.
 	c := make(doneChan)
 	rt.downstream <- downstreamRequest{tr, w, c}

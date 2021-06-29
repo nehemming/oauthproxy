@@ -1,11 +1,11 @@
 /*
 Copyright © 2018-2021 Neil Hemming
 */
+
 package proxy
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
@@ -21,7 +21,7 @@ func replyInvalid(w http.ResponseWriter) {
 	replyWithError(w, http.StatusBadRequest, "bad request")
 }
 
-func replyWithError(w http.ResponseWriter, statusCode int, msg string) {
+func replyWithError(w http.ResponseWriter, statusCode int, msg string) error {
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
 	data := make(map[string]interface{})
@@ -30,8 +30,5 @@ func replyWithError(w http.ResponseWriter, statusCode int, msg string) {
 	data["error_code"] = statusCode
 
 	w.WriteHeader(statusCode)
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		log.Println("Reply:", err, statusCode, msg)
-	}
+	return json.NewEncoder(w).Encode(data)
 }

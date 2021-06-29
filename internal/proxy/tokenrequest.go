@@ -1,6 +1,7 @@
 /*
 Copyright © 2018-2021 Neil Hemming
 */
+
 package proxy
 
 import (
@@ -28,7 +29,7 @@ type (
 	}
 )
 
-func (tr *tokenRequest) prepareRequest(endpointUrl string) (*http.Request, error) {
+func (tr *tokenRequest) prepareRequest(endpointURL string) (*http.Request, error) {
 	v := url.Values{
 		"grant_type": {"password"},
 		"username":   {tr.username},
@@ -45,7 +46,7 @@ func (tr *tokenRequest) prepareRequest(endpointUrl string) (*http.Request, error
 		v.Set("scope", tr.scopes)
 	}
 
-	url := endpointUrl + tr.path
+	url := endpointURL + tr.path
 
 	req, err := http.NewRequest("POST", url, strings.NewReader(v.Encode()))
 	if err != nil {
