@@ -41,6 +41,9 @@ type (
 	// tokenCache is the token cache
 	tokenCache map[tokenRequest]entry
 
+	// httpFunc function to send request
+	httpRequestFunc func(context.Context, *http.Request) (*http.Response, error)
+
 	// runtime contains all the service running state
 	runtime struct {
 		ctx                 context.Context
@@ -56,6 +59,7 @@ type (
 		downstream          chan downstreamRequest
 		downstreamWaitGroup sync.WaitGroup
 		isStopping          bool
+		requester           httpRequestFunc
 	}
 )
 
@@ -120,6 +124,10 @@ func newRuntime(ctx context.Context, settings Settings) *runtime {
 		endpoint:          settings.Endpoint,
 		houseKeeperPeriod: settings.CacheTTL,
 		logger:            settings.Logger,
+
+		requester: func(ctx context.Context, req *http.Request) (*http.Response, error) {
+			return ctxhttp.Do(ctx, nil, req)
+		},
 	}
 
 	// Add the house keeping to the service waitgroup
@@ -356,7 +364,7 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 	defer cancel()
 
 	//	Round trip request
-	resp, err := ctxhttp.Do(ctxTimeout, nil, req)
+	resp, err := rt.requester(ctxTimeout, req)
 	if err != nil {
 		rt.logError("send request: %s", err)
 		replyInvalid(w)

@@ -6,12 +6,40 @@ package proxy
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"golang.org/x/oauth2"
 )
+
+func TestRun(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+
+	waiter := make(chan struct{})
+	done := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		close(waiter)
+		Run(ctx, settings)
+		close(done)
+	}()
+
+	<-waiter
+
+	time.Sleep(time.Microsecond * 100)
+	cancel()
+
+	<-done
+
+}
 
 func TestNewRuntime(t *testing.T) {
 
@@ -226,5 +254,244 @@ func TestParseRequestMatchHeader(t *testing.T) {
 
 	if tr != expected {
 		t.Error("Unexpected token returned", tr)
+	}
+}
+
+func TestCacheClean(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	key := tokenRequest{
+		path:         "/something/token",
+		clientID:     "123",
+		clientSecret: "456",
+		username:     "u1",
+		password:     "p1",
+		scopes:       "alpha bravo",
+		authMode:     authInHeader,
+	}
+
+	now := time.Date(2020, 01, 01, 01, 00, 00, 00, time.UTC)
+
+	expired := now.Add(-time.Hour * 24)
+
+	rt.cache[key] = entry{
+		token:      []byte("test"),
+		statusCode: http.StatusOK,
+		expiry:     expired,
+	}
+
+	key2 := key
+	key2.clientID = "888"
+	rt.cache[key2] = entry{
+		token:      []byte("keep"),
+		statusCode: http.StatusOK,
+		expiry:     now,
+	}
+
+	rt.clean(now)
+
+	if len(rt.cache) != 1 {
+		t.Error("cache not cleared correctly")
+	}
+
+	if _, ok := rt.cache[key2]; !ok {
+		t.Error("key2 missing")
+	}
+}
+
+func TestLookup(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	key := tokenRequest{
+		path:         "/something/token",
+		clientID:     "123",
+		clientSecret: "456",
+		username:     "u1",
+		password:     "p1",
+		scopes:       "alpha bravo",
+		authMode:     authInHeader,
+	}
+
+	now := time.Date(2020, 01, 01, 01, 00, 00, 00, time.UTC)
+	expired := now.Add(-time.Hour * 24)
+
+	rt.cache[key] = entry{
+		token:      []byte("test"),
+		statusCode: http.StatusOK,
+		expiry:     expired,
+	}
+
+	entry := rt.lookup(key)
+
+	if string(entry.token) != "test" {
+		t.Error("Invalid token", entry)
+	}
+
+	key.authMode = authInBody
+	entry = rt.lookup(key)
+
+	if string(entry.token) != "" {
+		t.Error("Invalid token found", entry)
+	}
+}
+
+func TestHandlerFuncForCached(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	key := tokenRequest{
+		path:         "/something/token",
+		clientID:     "123",
+		clientSecret: "456",
+		username:     "u1",
+		password:     "p1",
+		scopes:       "alpha bravo",
+		authMode:     authInBody,
+	}
+
+	expiry := time.Now().UTC().Add(time.Hour)
+
+	rt.cache[key] = entry{
+		token:      []byte("test"),
+		statusCode: http.StatusOK,
+		expiry:     expiry,
+	}
+
+	reader := strings.NewReader("client_id=123&client_secret=456&grant_type=password&password=p1&scope=alpha+bravo&username=u1")
+	req, _ := http.NewRequest("POST", "http:/something/token", reader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+
+	rt.handleRequest(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Invalid status", w.Code)
+	}
+
+	body := w.Body.String()
+	if string(body) != "test" {
+		t.Error("body:", string(body))
+	}
+
+}
+
+func TestHandlerFuncForExpiredBadUrlFails(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	key := tokenRequest{
+		path:         "/something/token",
+		clientID:     "123",
+		clientSecret: "456",
+		username:     "u1",
+		password:     "p1",
+		scopes:       "alpha bravo",
+		authMode:     authInBody,
+	}
+
+	expiry := time.Now().UTC().Add(-time.Hour)
+
+	rt.cache[key] = entry{
+		token:      []byte("test"),
+		statusCode: http.StatusOK,
+		expiry:     expiry,
+	}
+
+	reader := strings.NewReader("client_id=123&client_secret=456&grant_type=password&password=p1&scope=alpha+bravo&username=u1")
+	req, _ := http.NewRequest("POST", "http:/something/token", reader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+
+	rt.handleRequest(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Error("Invalid status", w.Code)
+	}
+
+	expected := "{\"error\":\"bad request\",\"error_code\":400,\"error_description\":\"bad request\"}"
+	body := w.Body.String()
+	if !strings.HasPrefix(string(body), expected) {
+		t.Error("body:", string(body))
+	}
+}
+
+func TestHandlerFuncForExpiredGetsNewToken(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	expiry := time.Now().UTC().Add(3 * time.Minute)
+
+	rt.requester = func(ctx context.Context, req *http.Request) (*http.Response, error) {
+
+		w := httptest.NewRecorder()
+
+		w.WriteHeader(http.StatusOK)
+
+		t := &oauth2.Token{
+			AccessToken: "test",
+			Expiry:      expiry,
+		}
+		json.NewEncoder(w).Encode(t)
+
+		return w.Result(), nil
+	}
+
+	reader := strings.NewReader("client_id=123&client_secret=456&grant_type=password&password=p1&scope=alpha+bravo&username=u1")
+	req, _ := http.NewRequest("POST", "http:/something/token", reader)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	w := httptest.NewRecorder()
+
+	rt.handleRequest(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Error("Non success status", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.HasPrefix(body, "{\"access_token\":\"test\",\"expiry\":\"") {
+		t.Error("body:", string(body))
+	}
+
+}
+
+func TestHandlerFuncUpdate(t *testing.T) {
+
+	settings := DefaultSettings().WithEndpoint("test")
+	rt := newRuntime(context.Background(), settings)
+	defer rt.close()
+
+	key := tokenRequest{
+		path:         "/something/token",
+		clientID:     "123",
+		clientSecret: "456",
+		username:     "u1",
+		password:     "p1",
+		scopes:       "alpha bravo",
+		authMode:     authInBody,
+	}
+	rt.update(key, http.Header{}, []byte("test"), http.StatusOK)
+
+	found, ok := rt.cache[key]
+	if !ok {
+		t.Error("Not found key")
+	}
+
+	if found.statusCode != http.StatusOK {
+		t.Error("Entry not matching")
 	}
 }

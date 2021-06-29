@@ -92,7 +92,7 @@ func TestPrepareRequestAuthBodySucceeds(t *testing.T) {
 	}
 }
 
-func TestGenRequestROUNDTRIP(t *testing.T) {
+func TestGenRequestRoundtrip(t *testing.T) {
 	tr := tokenRequest{
 		clientID:     "123",
 		clientSecret: "456",
