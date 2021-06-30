@@ -3,5 +3,5 @@ oauthproxy
 *.exe
 *.out
 /vendor/
-.secrets
+.secrets*
 .__debug_bin
