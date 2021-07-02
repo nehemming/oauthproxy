@@ -38,7 +38,7 @@ type (
 
 // Run executes the command line interface to the app.  The passed ctx is used to cancel long running tasks.
 // appName is the name of the application and forms the suffix of the dot config file
-func Run(ctx context.Context, appName string) int {
+func Run(ctx context.Context, appName string, version string) int {
 
 	cli := &cli{
 		appName: appName,
@@ -48,14 +48,17 @@ func Run(ctx context.Context, appName string) int {
 			Long:          "Provides a oauth2 token proxy, designed to reduce load on the downstream authentication provider",
 			Args:          cobra.NoArgs,
 			SilenceErrors: true,
+			Version:       version,
 		},
 		ctx: ctx,
 	}
 
+	cli.rootCmd.SetVersionTemplate(`{{printf "%s:%s\n" .Name .Version}}`)
+
 	serverCmd := &cobra.Command{
 		Use:           "serve",
 		Short:         "run the oauth2 token proxy server",
-		Long:          "runs the auth2 token proxy server",
+		Long:          "run the auth2 token proxy server",
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
 		RunE:          cli.runServerCmd,

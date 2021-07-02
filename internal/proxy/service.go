@@ -183,6 +183,7 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 		if tr.clientSecret == "" {
 			tr.clientSecret = p
 		}
+
 	} else {
 		tr.authMode = authInBody
 		tr.clientID = r.PostFormValue("client_id")
@@ -208,7 +209,7 @@ func (rt *runtime) close() {
 	// Close the channel, will cause downstreamService to exit
 	close(rt.downstream)
 
-	//	Wait for all downstreamService have closed
+	// Wait for all downstreamService have closed
 	rt.downstreamWaitGroup.Wait()
 
 	rt.logInfo("shutdown complete")
@@ -256,7 +257,7 @@ func (rt *runtime) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// If thee entry is not valid request a token from the down stream service.
 	if entry.token == nil || entry.expiry.Before(time.Now().UTC()) {
-		//	Not found or expied, request new token
+		// Not found or expied, request new token
 		rt.requestFromDownstream(tr, w)
 		return
 	}
@@ -317,7 +318,7 @@ func (rt *runtime) processDownstreamRequest(dReq downstreamRequest) {
 	// Double check if token exists
 	entry := rt.lookup(dReq.tr)
 	if entry.token != nil && entry.expiry.After(time.Now().UTC()) {
-		//	Already have, return here
+		// Already have, return here
 		rt.reply(dReq.w, entry)
 		return
 	}
@@ -363,7 +364,7 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 	ctxTimeout, cancel := context.WithTimeout(rt.ctx, rt.requestTimeout)
 	defer cancel()
 
-	//	Round trip request
+	// Round trip request
 	resp, err := rt.requester(ctxTimeout, req)
 	if err != nil {
 		rt.logError("send request: %s", err)
@@ -384,7 +385,7 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 	// Handle reply
 	header := http.Header{}
 
-	//	Set headers from downstream
+	// Set headers from downstream
 	for key := range resp.Header {
 		w.Header().Set(key, resp.Header.Get(key))
 		header.Set(key, resp.Header.Get(key))

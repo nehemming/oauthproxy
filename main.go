@@ -14,6 +14,10 @@ import (
 	"github.com/nehemming/oauthproxy/internal/cmd"
 )
 
+var (
+	Version = "dev build"
+)
+
 func main() {
 	// Create main app context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -30,7 +34,7 @@ func main() {
 	// Main service entrypoint
 	appName := strings.ToLower(filepath.Base(os.Args[0]))
 
-	var exitCode = cmd.Run(ctx, appName)
+	var exitCode = cmd.Run(ctx, appName, Version)
 
 	// Exit with the returned exit code
 	os.Exit(exitCode)

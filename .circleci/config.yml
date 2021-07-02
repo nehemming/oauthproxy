@@ -1,21 +1,203 @@
-# Golang CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+# circleci build
+version: 2.1
+orbs:
+  upx: circleci/upx@1.0.1
 jobs:
-  build:
+  test:
+    working_directory: ~/src
     docker:
-      # specify the version
       - image: circleci/golang:1.16
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
+      - run:
+          name: "Run tests"
+          command: |
+            set -e
 
-      # specify any bash command here prefixed with `run: `
-      - run: go get -v -t -d ./...
-      - run: go test -v ./...
+            echo "Get dependencies ..."
+            go get -v -t -d ./...
+
+            echo "Run tests ..."
+            CGO_ENABLED=0 GOOS=linux go test ./...
+            curl -d "repo=github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" https://goreportcard.com/checks > /dev/null 2>&1
+  build:
+    docker:
+      - image: circleci/golang:1.16
+    working_directory: ~/src
+    environment:
+      BUILD: /tmp/building
+      WS: workspace/built
+    steps:
+      - checkout
+      - run:
+          name: "Test and cross compile build"
+          command: |
+            set -e
+
+            VERSION=$(cat ./VERSION)
+
+            run_build() {
+              echo "Building $VERSION $1 $2 oauthproxy$3"
+              mkdir -p $BUILD/$1/$2 
+              CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -a -o $BUILD/$1/$2/oauthproxy$3 -ldflags="-s -w -X main.Version=$VERSION"
+            }
+
+            echo "Get dependencies ..."
+            go get -v -t -d ./...
+
+            echo "Run tests ..."
+            CGO_ENABLED=0 GOOS=linux go test ./...
+
+            curl -d "repo=github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" https://goreportcard.com/checks > /dev/null 2>&1
+
+            run_build linux amd64
+            run_build darwin amd64
+            run_build windows amd64 ".exe"
+
+      - upx/install
+      - upx/pack:
+          binary: $BUILD/linux/amd64/oauthproxy
+      - upx/pack:
+          binary: $BUILD/darwin/amd64/oauthproxy
+      - upx/pack:
+          binary: $BUILD/windows/amd64/oauthproxy.exe
+      - run:
+          name: "Package release"
+          command: |
+            set -e
+            VERSION=$(cat ./VERSION)
+            echo "Packing $VERSION ..."
+
+            mkdir -p $WS
+
+            zipup() {
+              echo "Zipping $VERSION $1 $2 oauthproxy$3"
+              ARC=$(pwd)/$WS
+              pushd $BUILD/$1/$2
+              zip $ARC/oauthproxy_$VERSION_$1_$2.zip oauthproxy$3
+              popd
+            }
+            
+            tarup() {
+              echo "Taring $VERSION $1 $2 oauthproxy$3"
+              ARC=$(pwd)/$WS
+              pushd $BUILD/$1/$2
+              tar -czvf $ARC/oauthproxy_$VERSION_$1_$2.tar.gz *
+              popd
+            }
+            
+            tarup linux amd64
+            zipup darwin amd64
+            zipup windows amd64 ".exe" 
+
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - built
+  release:
+    docker:
+      - image: cibuilds/github:0.10
+    working_directory: ~/src
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./.workspace
+      - run:
+          name: "Publish Release on GitHub"
+          command: |
+            set -e
+            VERSION=$(cat ./VERSION)
+
+            ghr \
+              -t ${GITHUB_TOKEN} \
+              -u ${CIRCLE_PROJECT_USERNAME} \
+              -r ${CIRCLE_PROJECT_REPONAME} \
+              -c ${CIRCLE_SHA1} \
+              -delete \
+              "v$VERSION" \
+              "./.workspace/built/"
+  dockerbuild:
+    working_directory: ~/src
+    docker:
+      - image: circleci/golang:1.16
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.6
+          docker_layer_caching: true
+      - run:
+          name: "Build docker image"
+          command: |
+            set -e
+            VERSION=$(cat ./VERSION)
+            TAG="alpine-$VERSION"
+            echo "Docker build $TAG"
+            docker build -t ${CIRCLE_PROJECT_REPONAME}:$TAG .
+  dockerpublish:
+    working_directory: ~/src
+    docker:
+      - image: circleci/golang:1.16
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.6
+          docker_layer_caching: true
+      - run:
+          name: "Publish docker image"
+          command: |
+            set -e
+            VERSION=$(cat ./VERSION)
+            TAG="alpine-$VERSION"
+            REGISTRY=ghcr.io
+            REPO=$REGISTRY/$CIRCLE_PROJECT_USERNAME/${CIRCLE_PROJECT_REPONAME}
+            echo "Docker build $REPO:$TAG"
+            docker build \
+              --build-arg REPO_USER=$CIRCLE_PROJECT_USERNAME  \
+              --build-arg REPO_NAME=$CIRCLE_PROJECT_REPONAME  \
+              -t $REPO:$TAG .
+            docker image tag $REPO:$TAG $REPO:latest
+            echo $GITHUB_TOKEN | docker login $REGISTRY -u $CIRCLE_PROJECT_USERNAME --password-stdin
+            docker push $REPO:$TAG
+            docker push $REPO:latest 
+
+workflows:
+  version: 2
+  testing:
+    jobs:
+      - test:
+          filters:
+            tags:
+              ignore: 
+                - /^v\d+\.\d+\.\d+.*$/
+      - dockerbuild:
+          requires:
+            - test
+          filters:
+              tags:
+                ignore: 
+                  - /^v\d+\.\d+\.\d+.*$/
+  release:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+.*$/
+      - release:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+.*$/
+      - dockerpublish:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+.*$/
+            

@@ -66,7 +66,7 @@ func (cli *cli) bindServeFlagsAndConfig(cmd *cobra.Command) {
 // configureSettings configures the applications settings
 func configureSettings(settings proxy.Settings) (proxy.Settings, error) {
 
-	//	Add in the settings
+	// Add in the settings
 	endpoint := viper.GetString(cfgEndpoint)
 	port := viper.GetUint(cfgPort)
 

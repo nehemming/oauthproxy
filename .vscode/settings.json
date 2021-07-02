@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
         "Errorln",
+        "circleci",
         "ctxhttp",
+        "dockerbuild",
+        "dockerpublish",
         "nehemming",
         "oauthproxy"
     ]
