@@ -7,18 +7,29 @@ package proxy
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/nehemming/cirocket/pkg/loggee"
 )
 
 func replyServiceUnavailable(w http.ResponseWriter) {
-	replyWithError(w, http.StatusServiceUnavailable, "Service unavailable")
+	err := replyWithError(w, http.StatusServiceUnavailable, "Service unavailable")
+	if err != nil {
+		loggee.Warn(err.Error())
+	}
 }
 
 func replyNotFound(w http.ResponseWriter) {
-	replyWithError(w, http.StatusNotFound, "Not found")
+	err := replyWithError(w, http.StatusNotFound, "Not found")
+	if err != nil {
+		loggee.Warn(err.Error())
+	}
 }
 
 func replyInvalid(w http.ResponseWriter) {
-	replyWithError(w, http.StatusBadRequest, "bad request")
+	err := replyWithError(w, http.StatusBadRequest, "bad request")
+	if err != nil {
+		loggee.Warn(err.Error())
+	}
 }
 
 func replyWithError(w http.ResponseWriter, statusCode int, msg string) error {

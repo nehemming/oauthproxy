@@ -2,8 +2,18 @@
 
 A oauth2 proxy token caching service for password authentication flows.
 
-[![Build Status](https://circleci.com/gh/nehemming/oauthproxy.svg?style=svg)](https://github.com/nehemming/oauthproxy)
-[![GoReportCard](https://goreportcard.com/badge/github.com/nehemming/oauthproxy?test=0)](https://goreportcard.com/report/github.com/nehemming/oauthproxy)
+
+![Status](https://img.shields.io/badge/Status-ALPHA-red?style=for-the-badge)
+[![Build Status](https://img.shields.io/circleci/build/gh/nehemming/oauthproxy/master?style=for-the-badge)](https://github.com/nehemming/oauthproxy) 
+[![Release](https://img.shields.io/github/v/release/nehemming/oauthproxy.svg?style=for-the-badge)](https://github.com/nehemming/oauthproxy/releases/latest)
+[![Coveralls](https://img.shields.io/coveralls/github/nehemming/oauthproxy?style=for-the-badge)](https://coveralls.io/github/nehemming/oauthproxy)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](/LICENSE)
+[![GoReportCard](https://goreportcard.com/badge/github.com/nehemming/oauthproxy?test=0&style=for-the-badge)](https://goreportcard.com/report/github.com/nehemming/oauthproxy)
+[![Go Doc](https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge)](http://godoc.org/github.com/goreleaser/goreleaser)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg?style=for-the-badge)](https://conventionalcommits.org)
+[![Uses: cirocket](https://img.shields.io/badge/Uses-cirocket-orange?style=for-the-badge)](https://github.com/nehemming/cirocket)
+[![Uses: GoReleaser](https://img.shields.io/badge/uses-goreleaser-green.svg?style=for-the-badge)](https://github.com/goreleaser)
+
 
 ## Introduction
 

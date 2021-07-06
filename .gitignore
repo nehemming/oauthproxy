@@ -5,3 +5,4 @@ oauthproxy
 /vendor/
 .secrets*
 .__debug_bin
+/.dist

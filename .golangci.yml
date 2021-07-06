@@ -1,0 +1,16 @@
+linters:
+  enable:
+    - bodyclose
+    - cyclop
+    - godot
+    - gofmt
+    - misspell
+    - sqlclosecheck
+    - unconvert
+    - whitespace
+    - thelper
+    - gofumpt
+    - tparallel
+    - unparam
+    - wastedassign
+    - revive

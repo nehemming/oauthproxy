@@ -2,7 +2,7 @@
 Copyright © 2018-2021 Neil Hemming
 */
 
-//Package proxy contains the implementation of the oauthproxy service
+// Package proxy contains the implementation of the oauthproxy service.
 package proxy
 
 import (
@@ -15,22 +15,23 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nehemming/cirocket/pkg/loggee"
 	"golang.org/x/net/context/ctxhttp"
 	"golang.org/x/oauth2"
 )
 
 type (
-	// doneChan is used to flag when a request has been processed
+	// doneChan is used to flag when a request has been processed.
 	doneChan chan struct{}
 
-	// downstreamRequest is an active request to the downstream system for a token
+	// downstreamRequest is an active request to the downstream system for a token.
 	downstreamRequest struct {
 		tr   tokenRequest
 		w    http.ResponseWriter
 		done doneChan
 	}
 
-	// entry is an entry in the cache
+	// entry is an entry in the cache.
 	entry struct {
 		token      []byte
 		header     http.Header
@@ -38,13 +39,13 @@ type (
 		expiry     time.Time
 	}
 
-	// tokenCache is the token cache
+	// tokenCache is the token cache.
 	tokenCache map[tokenRequest]entry
 
-	// httpFunc function to send request
+	// httpFunc function to send request.
 	httpRequestFunc func(context.Context, *http.Request) (*http.Response, error)
 
-	// runtime contains all the service running state
+	// runtime contains all the service running state.
 	runtime struct {
 		ctx                 context.Context
 		requestTimeout      time.Duration
@@ -66,7 +67,6 @@ type (
 // Run will setup and run the server until the passed context is cancelled.
 // If the server cannot be run, or fails to shut gracefully an error will be returned.
 func Run(ctx context.Context, settings Settings) error {
-
 	// Validate settings
 	if err := settings.validateSettings(); err != nil {
 		return err
@@ -80,7 +80,7 @@ func Run(ctx context.Context, settings Settings) error {
 	srv := http.Server{
 		Addr:    settings.HTTPListenAddr,
 		Handler: http.HandlerFunc(rt.handleRequest),
-		//ErrorLog: &log.Logger{},
+		// ErrorLog: &log.Logger{},
 	}
 
 	go func() {
@@ -110,7 +110,7 @@ func Run(ctx context.Context, settings Settings) error {
 	return srv.Shutdown(ctxShutDown)
 }
 
-// newRuntime creates the internal runtime object used to handle the service
+// newRuntime creates the internal runtime object used to handle the service.
 func newRuntime(ctx context.Context, settings Settings) *runtime {
 	runningCtx, cancel := context.WithCancel(ctx)
 
@@ -144,9 +144,8 @@ func newRuntime(ctx context.Context, settings Settings) *runtime {
 	return rt
 }
 
-// parseRequest checks the request is for a token and extract the details
+// parseRequest checks the request is for a token and extract the details.
 func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRequest, bool) {
-
 	// Create a token request
 	tr := tokenRequest{
 		path: r.URL.Path,
@@ -174,7 +173,6 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 
 	// Test for auth in header
 	if u, p, ok := r.BasicAuth(); ok {
-
 		tr.authMode = authInHeader
 
 		if tr.clientID == "" {
@@ -183,7 +181,6 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 		if tr.clientSecret == "" {
 			tr.clientSecret = p
 		}
-
 	} else {
 		tr.authMode = authInBody
 		tr.clientID = r.PostFormValue("client_id")
@@ -199,14 +196,13 @@ func (rt *runtime) parseRequest(w http.ResponseWriter, r *http.Request) (tokenRe
 }
 
 // close terminates the service. It can only be called once
-// use rt.cancel to initiate shutdown
+// use rt.cancel to initiate shutdown.
 func (rt *runtime) close() {
-
-	// Cancel the context, will close house keeping
+	// Cancel the context, will close house keeping.
 	rt.cancel()
 	rt.isStopping = true
 
-	// Close the channel, will cause downstreamService to exit
+	// Close the channel, will cause downstreamService to exit.
 	close(rt.downstream)
 
 	// Wait for all downstreamService have closed
@@ -223,28 +219,27 @@ func (rt *runtime) criticalError(err error) {
 	rt.cancel()
 }
 
-// logInfo logs a info message for the service
+// logInfo logs a info message for the service.
 func (rt *runtime) logInfo(format string, args ...interface{}) {
 	if rt.logger != nil {
 		rt.logger(false, format, args...)
 	}
 }
 
-// logError logs a error message for the service
+// logError logs a error message for the service.
 func (rt *runtime) logError(format string, args ...interface{}) {
 	if rt.logger != nil {
 		rt.logger(true, format, args...)
 	}
 }
 
-// done captures the running contexts exit channel
+// done captures the running contexts exit channel.
 func (rt *runtime) done() <-chan struct{} {
 	return rt.ctx.Done()
 }
 
-// handleRequest handles the incoming http token request
+// handleRequest handles the incoming http token request.
 func (rt *runtime) handleRequest(w http.ResponseWriter, r *http.Request) {
-
 	// Check the request isa a valid token request
 	tr, matched := rt.parseRequest(w, r)
 	if !matched {
@@ -266,13 +261,12 @@ func (rt *runtime) handleRequest(w http.ResponseWriter, r *http.Request) {
 	rt.reply(w, entry)
 }
 
-// housekeeper runs the house keeping service
+// housekeeper runs the house keeping service.
 func (rt *runtime) housekeeper() {
 	// Mark closure in work group
 	defer rt.downstreamWaitGroup.Done()
 
 	for {
-
 		// Set up a context to time out after the house keeping period
 		wait, cancel := context.WithTimeout(rt.ctx, rt.houseKeeperPeriod)
 
@@ -290,9 +284,8 @@ func (rt *runtime) housekeeper() {
 	}
 }
 
-// downstreamService executes the main down stream request processing
+// downstreamService executes the main down stream request processing.
 func (rt *runtime) downstreamService() {
-
 	// Mark closure in work group
 	defer rt.downstreamWaitGroup.Done()
 
@@ -302,9 +295,8 @@ func (rt *runtime) downstreamService() {
 	}
 }
 
-// processDownstreamRequest handles an individual down sstream request
+// processDownstreamRequest handles an individual down sstream request.
 func (rt *runtime) processDownstreamRequest(dReq downstreamRequest) {
-
 	// Close request
 	defer close(dReq.done)
 
@@ -327,7 +319,7 @@ func (rt *runtime) processDownstreamRequest(dReq downstreamRequest) {
 	rt.getDownstreamToken(dReq.tr, dReq.w)
 }
 
-// requestFromDownstream is called when a client request needs to get a new token
+// requestFromDownstream is called when a client request needs to get a new token.
 func (rt *runtime) requestFromDownstream(tr tokenRequest, w http.ResponseWriter) {
 	if rt.isStopping {
 		replyServiceUnavailable(w)
@@ -346,9 +338,8 @@ func (rt *runtime) requestFromDownstream(tr tokenRequest, w http.ResponseWriter)
 	<-c
 }
 
-// getDownstreamToken handles downstream requests
+// getDownstreamToken handles downstream requests.
 func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
-
 	// create a request
 	req, err := tr.prepareRequest(rt.endpoint)
 	if err != nil {
@@ -393,7 +384,11 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 
 	// Write header and body
 	w.WriteHeader(resp.StatusCode)
-	w.Write(body)
+	_, err = w.Write(body)
+	if err != nil {
+		//	Write body error log
+		loggee.Warn(err.Error())
+	}
 
 	// If reply was a 500+ error don't cache the result
 	if resp.StatusCode < http.StatusInternalServerError &&
@@ -402,9 +397,8 @@ func (rt *runtime) getDownstreamToken(tr tokenRequest, w http.ResponseWriter) {
 	}
 }
 
-// reply to a upstream request with an existing entry
+// reply to a upstream request with an existing entry.
 func (rt *runtime) reply(w http.ResponseWriter, entry entry) {
-
 	// Send the reply back, set standard headers
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	w.Header().Set("Cache-Control", "no-store")
@@ -416,21 +410,21 @@ func (rt *runtime) reply(w http.ResponseWriter, entry entry) {
 	}
 
 	w.WriteHeader(entry.statusCode)
-	w.Write(entry.token)
+	if _, err := w.Write(entry.token); err != nil {
+		loggee.Warn(err.Error())
+	}
 }
 
-// lookup checks the cache for an existing user
+// lookup checks the cache for an existing user.
 func (rt *runtime) lookup(tr tokenRequest) entry {
-
 	rt.rwLock.RLock()
 	defer rt.rwLock.RUnlock()
 
 	return rt.cache[tr]
 }
 
-// update updates entries in the cache
+// update updates entries in the cache.
 func (rt *runtime) update(tr tokenRequest, header http.Header, body []byte, statusCode int) {
-
 	rt.logInfo("update cache for %s with status %d", tr.path, statusCode)
 
 	now := time.Now().UTC()
@@ -461,7 +455,6 @@ func (rt *runtime) update(tr tokenRequest, header http.Header, body []byte, stat
 }
 
 func (rt *runtime) clean(now time.Time) {
-
 	rt.logInfo("running housekeeping")
 
 	rt.rwLock.Lock()

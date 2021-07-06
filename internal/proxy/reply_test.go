@@ -45,7 +45,6 @@ func TestReplyWithErrorIsJSON(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	err := replyWithError(w, 999, "quick")
-
 	if err != nil {
 		t.Error("Encoding error")
 	}

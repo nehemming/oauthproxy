@@ -2,7 +2,7 @@
 Copyright © 2018-2021 Neil Hemming
 */
 
-//Package cmd provides the command line interface to oauthproxy
+// Package cmd provides the command line interface to oauthproxy
 package cmd
 
 import (
@@ -11,16 +11,17 @@ import (
 	"os"
 
 	homedir "github.com/mitchellh/go-homedir"
-	log "github.com/sirupsen/logrus"
+	"github.com/nehemming/cirocket/pkg/loggee"
+	"github.com/nehemming/cirocket/pkg/loggee/apexlog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 const (
-	// ExitCodeSuccess indicates a successful exit
+	// ExitCodeSuccess indicates a successful exit.
 	ExitCodeSuccess = 0
 
-	// ExitCodeError indicates a non successful process exit
+	// ExitCodeError indicates a non successful process exit.
 	ExitCodeError = 1
 
 	envPrefix  = "OAP"
@@ -37,8 +38,9 @@ type (
 )
 
 // Run executes the command line interface to the app.  The passed ctx is used to cancel long running tasks.
-// appName is the name of the application and forms the suffix of the dot config file
+// appName is the name of the application and forms the suffix of the dot config file.
 func Run(ctx context.Context, appName string, version string) int {
+	loggee.SetLogger(apexlog.NewCli(2))
 
 	cli := &cli{
 		appName: appName,
@@ -87,7 +89,7 @@ func Run(ctx context.Context, appName string, version string) int {
 
 	// Execute the root command
 	if err := cli.rootCmd.Execute(); err != nil {
-		log.Error(err)
+		loggee.Error(err.Error())
 		return ExitCodeError
 	}
 
@@ -95,9 +97,8 @@ func Run(ctx context.Context, appName string, version string) int {
 	return ExitCodeSuccess
 }
 
-// initConfig is called during the cobra start up process to init the config settings
+// initConfig is called during the cobra start up process to init the config settings.
 func (cli *cli) initConfig() {
-
 	// Establish logging
 	isCustomConfig := false
 	viper.SetConfigType("yaml")
@@ -110,7 +111,7 @@ func (cli *cli) initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			log.Error(err)
+			loggee.Error(err.Error())
 			os.Exit(ExitCodeError)
 		}
 
@@ -128,9 +129,9 @@ func (cli *cli) initConfig() {
 	cfgName := viper.ConfigFileUsed()
 
 	if isCustomConfig && err != nil {
-		log.Error(err)
+		loggee.Error(err.Error())
 		os.Exit(ExitCodeError)
 	} else if cfgName != "" {
-		log.Println(fmt.Sprintf("using config %s", viper.ConfigFileUsed()))
+		loggee.Infof("using config %s", cfgName)
 	}
 }

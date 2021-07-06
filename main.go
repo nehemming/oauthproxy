@@ -15,7 +15,9 @@ import (
 )
 
 var (
-	Version = "dev build"
+	// Version is the built version of the software.
+	version               = "dev build"
+	commit, date, builtBy string
 )
 
 func main() {
@@ -34,8 +36,23 @@ func main() {
 	// Main service entrypoint
 	appName := strings.ToLower(filepath.Base(os.Args[0]))
 
-	var exitCode = cmd.Run(ctx, appName, Version)
+	exitCode := cmd.Run(ctx, appName, Version(version, commit, date, builtBy))
 
 	// Exit with the returned exit code
 	os.Exit(exitCode)
+}
+
+func Version(version, commit, date, builtBy string) string {
+	if builtBy != "" {
+		builtBy = "[" + builtBy + "]"
+	}
+
+	v := version
+	for _, p := range []string{commit, date, builtBy} {
+		if p != "" {
+			v = v + " " + p
+		}
+	}
+
+	return v
 }

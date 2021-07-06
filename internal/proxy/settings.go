@@ -14,21 +14,21 @@ import (
 )
 
 const (
-	// CacheTTLMinValue is the smallest time permitted by the service for cached tokens
+	// CacheTTLMinValue is the smallest time permitted by the service for cached tokens.
 	CacheTTLMinValue = 10 * time.Minute
 
-	// RequestTimeoutMinValue is the smallest time permitted for request timeouts to down stream systems
+	// RequestTimeoutMinValue is the smallest time permitted for request timeouts to down stream systems.
 	RequestTimeoutMinValue = 10 * time.Second
 
-	// ShutdownGracePeriodMinValue is the smallest period of time the service can be configured to wait for a graceful exit
+	// ShutdownGracePeriodMinValue is the smallest period of time the service can be configured to wait for a graceful exit.
 	ShutdownGracePeriodMinValue = 5 * time.Second
 )
 
 type (
-	// LoggerFunc logging function
+	// LoggerFunc logging function.
 	LoggerFunc func(bool, string, ...interface{})
 
-	// Settings contains the proxy services settings
+	// Settings contains the proxy services settings.
 	Settings struct {
 		// CacheTTL how long a item remains valid in the cache
 		CacheTTL time.Duration
@@ -53,7 +53,7 @@ type (
 	}
 )
 
-// DefaultSettings returns the default settings for the service
+// DefaultSettings returns the default settings for the service.
 func DefaultSettings() Settings {
 	return Settings{
 		CacheTTL:            20 * time.Minute,
@@ -64,7 +64,7 @@ func DefaultSettings() Settings {
 	}
 }
 
-// WithEndpoint sets the down stream oauth services endpoint, the request path is appended to this setting
+// WithEndpoint sets the down stream oauth services endpoint, the request path is appended to this setting.
 func (settings Settings) WithEndpoint(endpoint string) Settings {
 	if endpoint != "" {
 		settings.Endpoint = endpoint
@@ -73,7 +73,7 @@ func (settings Settings) WithEndpoint(endpoint string) Settings {
 	return settings
 }
 
-// WithHTTPPort creates a new settings with the HTTP port set to the passed value
+// WithHTTPPort creates a new settings with the HTTP port set to the passed value.
 func (settings Settings) WithHTTPPort(port uint) Settings {
 	if port != 0 {
 		parts := strings.Split(settings.HTTPListenAddr, ":")
@@ -97,7 +97,6 @@ func (settings Settings) WithLogger(logger LoggerFunc) Settings {
 }
 
 func (settings Settings) validateSettings() error {
-
 	var result error
 
 	if settings.CacheTTL < CacheTTLMinValue {

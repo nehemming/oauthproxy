@@ -12,7 +12,6 @@ func TestPrepareRequestBasicSucceeds(t *testing.T) {
 	tr := tokenRequest{}
 
 	req, err := tr.prepareRequest("basic")
-
 	if err != nil {
 		t.Error("Expected success, got", err)
 	}
@@ -44,7 +43,6 @@ func TestPrepareRequestScopesucceeds(t *testing.T) {
 	tr := tokenRequest{scopes: "one two"}
 
 	req, err := tr.prepareRequest("scopes")
-
 	if err != nil {
 		t.Error("Expected success, got", err)
 	}
@@ -71,7 +69,6 @@ func TestPrepareRequestAuthBodySucceeds(t *testing.T) {
 	}
 
 	req, err := tr.prepareRequest("body")
-
 	if err != nil {
 		t.Error("Expected success, got", err)
 	}

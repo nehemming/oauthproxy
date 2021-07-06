@@ -19,7 +19,7 @@ type (
 	}
 
 	clientSettings struct {
-		//TokenUrl request url to the auth source
+		// TokenUrl request url to the auth source
 		TokenURL string `json:"tokenURL,omitempty"`
 
 		// UserName the users name
@@ -34,13 +34,12 @@ type (
 		// Client secret
 		ClientSecret string `json:"clientsecret,omitempty"`
 
-		//OpenIDScopes specifies optional requested permissions.
+		// OpenIDScopes specifies optional requested permissions.
 		OpenIDScopes []string `json:"scopes,omitempty"`
 	}
 )
 
 func (cli *cli) requestTokenCmd(cmd *cobra.Command, args []string) error {
-
 	secrets, err := loadSecrets(args[0])
 	if err != nil {
 		return err
@@ -51,7 +50,7 @@ func (cli *cli) requestTokenCmd(cmd *cobra.Command, args []string) error {
 		ClientSecret: secrets.ClientSecret,
 		Endpoint: oauth2.Endpoint{
 			TokenURL: secrets.TokenURL,
-			//AuthStyle: oauth2.AuthStyleInParams,
+			// AuthStyle: oauth2.AuthStyleInParams,
 		},
 		Scopes: secrets.OpenIDScopes,
 	}
@@ -65,7 +64,6 @@ func (cli *cli) requestTokenCmd(cmd *cobra.Command, args []string) error {
 }
 
 func loadSecrets(secretsFilePath string) (*clientSettings, error) {
-
 	b, err := ioutil.ReadFile(secretsFilePath)
 	if err != nil {
 		return nil, err

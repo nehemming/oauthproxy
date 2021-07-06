@@ -18,7 +18,6 @@ import (
 )
 
 func TestRun(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	waiter := make(chan struct{})
@@ -28,7 +27,7 @@ func TestRun(t *testing.T) {
 
 	go func() {
 		close(waiter)
-		Run(ctx, settings)
+		_ = Run(ctx, settings)
 		close(done)
 	}()
 
@@ -38,11 +37,9 @@ func TestRun(t *testing.T) {
 	cancel()
 
 	<-done
-
 }
 
 func TestNewRuntime(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -67,7 +64,6 @@ func TestNewRuntime(t *testing.T) {
 }
 
 func TestCriticalError(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 
@@ -85,7 +81,6 @@ func TestCriticalError(t *testing.T) {
 }
 
 func TestLoggingInfo(t *testing.T) {
-
 	called := false
 
 	fn := func(isErr bool, fmt string, args ...interface{}) {
@@ -113,7 +108,6 @@ func TestLoggingInfo(t *testing.T) {
 }
 
 func TestLoggingError(t *testing.T) {
-
 	called := false
 
 	fn := func(isErr bool, fmt string, args ...interface{}) {
@@ -141,7 +135,6 @@ func TestLoggingError(t *testing.T) {
 }
 
 func TestParseRequestNoMatch(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -165,13 +158,12 @@ func TestParseRequestNoMatch(t *testing.T) {
 }
 
 func TestParseRequestMatchBadRequestFail(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
 	reader := strings.NewReader("client_id=123&client_secret=456&grant_type=password&password=p1&scope=alpha+bravo&username=u1")
 	req, _ := http.NewRequest("POST", "http:/something/token", reader)
-	//no header coontent type
+	// no header coontent type
 
 	w := httptest.NewRecorder()
 	_, match := rt.parseRequest(w, req)
@@ -183,11 +175,9 @@ func TestParseRequestMatchBadRequestFail(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Error("Status not bad", w.Code)
 	}
-
 }
 
 func TestParseRequestMatchBody(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -222,7 +212,6 @@ func TestParseRequestMatchBody(t *testing.T) {
 }
 
 func TestParseRequestMatchHeader(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -258,7 +247,6 @@ func TestParseRequestMatchHeader(t *testing.T) {
 }
 
 func TestCacheClean(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -273,7 +261,7 @@ func TestCacheClean(t *testing.T) {
 		authMode:     authInHeader,
 	}
 
-	now := time.Date(2020, 01, 01, 01, 00, 00, 00, time.UTC)
+	now := time.Date(2020, 0o1, 0o1, 0o1, 0o0, 0o0, 0o0, time.UTC)
 
 	expired := now.Add(-time.Hour * 24)
 
@@ -303,7 +291,6 @@ func TestCacheClean(t *testing.T) {
 }
 
 func TestLookup(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -318,7 +305,7 @@ func TestLookup(t *testing.T) {
 		authMode:     authInHeader,
 	}
 
-	now := time.Date(2020, 01, 01, 01, 00, 00, 00, time.UTC)
+	now := time.Date(2020, 0o1, 0o1, 0o1, 0o0, 0o0, 0o0, time.UTC)
 	expired := now.Add(-time.Hour * 24)
 
 	rt.cache[key] = entry{
@@ -342,7 +329,6 @@ func TestLookup(t *testing.T) {
 }
 
 func TestHandlerFuncForCached(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -378,14 +364,12 @@ func TestHandlerFuncForCached(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	if string(body) != "test" {
-		t.Error("body:", string(body))
+	if body != "test" {
+		t.Error("body:", body)
 	}
-
 }
 
 func TestHandlerFuncForExpiredBadUrlFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -422,13 +406,12 @@ func TestHandlerFuncForExpiredBadUrlFails(t *testing.T) {
 
 	expected := "{\"error\":\"bad request\",\"error_code\":400,\"error_description\":\"bad request\"}"
 	body := w.Body.String()
-	if !strings.HasPrefix(string(body), expected) {
-		t.Error("body:", string(body))
+	if !strings.HasPrefix(body, expected) {
+		t.Error("body:", body)
 	}
 }
 
 func TestHandlerFuncForExpiredGetsNewToken(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()
@@ -436,7 +419,6 @@ func TestHandlerFuncForExpiredGetsNewToken(t *testing.T) {
 	expiry := time.Now().UTC().Add(3 * time.Minute)
 
 	rt.requester = func(ctx context.Context, req *http.Request) (*http.Response, error) {
-
 		w := httptest.NewRecorder()
 
 		w.WriteHeader(http.StatusOK)
@@ -445,9 +427,8 @@ func TestHandlerFuncForExpiredGetsNewToken(t *testing.T) {
 			AccessToken: "test",
 			Expiry:      expiry,
 		}
-		json.NewEncoder(w).Encode(t)
-
-		return w.Result(), nil
+		err := json.NewEncoder(w).Encode(t)
+		return w.Result(), err
 	}
 
 	reader := strings.NewReader("client_id=123&client_secret=456&grant_type=password&password=p1&scope=alpha+bravo&username=u1")
@@ -464,13 +445,11 @@ func TestHandlerFuncForExpiredGetsNewToken(t *testing.T) {
 
 	body := w.Body.String()
 	if !strings.HasPrefix(body, "{\"access_token\":\"test\",\"expiry\":\"") {
-		t.Error("body:", string(body))
+		t.Error("body:", body)
 	}
-
 }
 
 func TestHandlerFuncUpdate(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 	rt := newRuntime(context.Background(), settings)
 	defer rt.close()

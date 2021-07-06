@@ -16,7 +16,6 @@ func TestShutdownGracePeriodMinValue(t *testing.T) {
 }
 
 func TestDefaultSettings(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	if settings.CacheTTL != 20*time.Minute {
@@ -37,7 +36,6 @@ func TestDefaultSettings(t *testing.T) {
 }
 
 func TestWithEndpoint(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	settingsWithEndpoint := settings.WithEndpoint("test:99")
@@ -52,7 +50,6 @@ func TestWithEndpoint(t *testing.T) {
 }
 
 func TestWithHTTPPort(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	settingsWithPort := settings.WithHTTPPort(9990)
@@ -67,7 +64,6 @@ func TestWithHTTPPort(t *testing.T) {
 }
 
 func TestWithHTTPPortWithSinglePart(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	settings.HTTPListenAddr = "8080"
@@ -80,7 +76,6 @@ func TestWithHTTPPortWithSinglePart(t *testing.T) {
 }
 
 func TestWWithLogger(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	if settings.Logger != nil {
@@ -97,7 +92,6 @@ func TestWWithLogger(t *testing.T) {
 }
 
 func TestDefaultSettingsValidateSettingsFails(t *testing.T) {
-
 	settings := DefaultSettings()
 
 	err := settings.validateSettings()
@@ -108,18 +102,15 @@ func TestDefaultSettingsValidateSettingsFails(t *testing.T) {
 }
 
 func TestValidateSettingsSucceeds(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	err := settings.validateSettings()
-
 	if err != nil {
 		t.Error("DefaultSettings WithEndpoint has error", err)
 	}
 }
 
 func TestValidateSettingsBadCacheTTLFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	settings.CacheTTL = CacheTTLMinValue - 1
@@ -132,7 +123,6 @@ func TestValidateSettingsBadCacheTTLFails(t *testing.T) {
 }
 
 func TestValidateSettingsBadRequestTimeoutFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	settings.RequestTimeout = RequestTimeoutMinValue - 1
@@ -145,7 +135,6 @@ func TestValidateSettingsBadRequestTimeoutFails(t *testing.T) {
 }
 
 func TestValidateSettingsBadPoolSizeFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	settings.PoolSize = 0
@@ -158,7 +147,6 @@ func TestValidateSettingsBadPoolSizeFails(t *testing.T) {
 }
 
 func TestValidateSettingsBadShutdownGracePeriodFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	settings.ShutdownGracePeriod = ShutdownGracePeriodMinValue - 1
@@ -171,7 +159,6 @@ func TestValidateSettingsBadShutdownGracePeriodFails(t *testing.T) {
 }
 
 func TestValidateSettingsBadHTTPListenAddrFails(t *testing.T) {
-
 	settings := DefaultSettings().WithEndpoint("test")
 
 	settings.HTTPListenAddr = ""

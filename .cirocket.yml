@@ -1,0 +1,43 @@
+name: "release the project"
+version: '1.0'
+
+includes:
+  - url: https://raw.githubusercontent.com/nehemming/cirocket-config/master/build/stdbuild.yml
+
+params:
+  - name: projectName
+    value: '{{- or .projectName .Env.CIRCLE_PROJECT_REPONAME "oauthproxy"}}'
+    print: true
+
+  - name: description
+    value: 'A oauth2 proxy token caching service for password authentication flows.'
+  - name: builtBy
+    value: '{{- or .builtBy .Runtime.UserName }}'
+    print: true
+  - name: repoUser
+    value: '{{- or .repoUser .Env.CIRCLE_PROJECT_USERNAME "nehemming"}}'
+    print: true
+  - name: license
+    value: 'Apache 2.0'
+  - name: includePackages
+    value: yes
+  - name: includeDocker
+    value: yes
+  - name: includeGHCR
+    value: yes
+  - name: includeBrews
+    value: yes
+
+  # config for the header and footer
+  - name: resDir
+    value: build
+  - name: dockerfile
+    value: '{{ .resDir }}/Dockerfile.release'
+  - name: releaseHeader
+    optional: true
+    skipExpand: true
+    path: '{{ .resDir }}/header.tplt'
+  - name: releaseFooter
+    optional: true
+    skipExpand: true
+    path: '{{ .resDir }}/footer.tplt'
