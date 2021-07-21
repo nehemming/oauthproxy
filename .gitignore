@@ -6,3 +6,4 @@ oauthproxy
 .secrets*
 .__debug_bin
 /.dist
+/.artifacts
